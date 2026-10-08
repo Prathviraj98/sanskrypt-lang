@@ -15,13 +15,15 @@ class Interpreter:
         if self.lang == 'engscript':
             self.roots = {
                 'speak': 'io', 'hold': 'assign', 'compute': 'compute', 'do': 'control',
-                'file': 'file', 'func': 'function', 'mold': 'object', 'try': 'try'
+                'file': 'file', 'func': 'function', 'mold': 'object', 'try': 'try',
+                'bring': 'import'
             }
             self.end_marker = 'end'
         else:
             self.roots = {
                 'vad': 'io', 'dhri': 'assign', 'gan': 'compute', 'kri': 'control',
-                'lekh': 'file', 'karya': 'function', 'rupa': 'object', 'yatna': 'try'
+                'lekh': 'file', 'karya': 'function', 'rupa': 'object', 'yatna': 'try',
+                'anaya': 'import'
             }
             self.end_marker = 'iti'
 
@@ -113,6 +115,12 @@ class Interpreter:
                     if var_name:
                         self._set_var(var_name, str(e))
                 pc = end_idx
+                
+            elif action == 'import':
+                import importlib
+                var_name, val_expr = self._extract_vibhakti(args, needs_target=True)
+                mod_name = self._eval_expr(val_expr)
+                self._set_var(var_name, importlib.import_module(mod_name))
                 
             elif action == 'file':
                 if suffix.startswith('_write'):

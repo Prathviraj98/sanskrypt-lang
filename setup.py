@@ -7,7 +7,7 @@ with open(os.path.join(os.path.dirname(__file__), 'README.md'), encoding='utf-8'
 
 setup(
     name='sanskrypt-lang', # Unique name on PyPI
-    version='3.0.0',
+    version='4.0.0',
     description='A root-based, order-agnostic programming language inspired by Paninian grammar.',
     long_description=long_description,
     long_description_content_type='text/markdown',

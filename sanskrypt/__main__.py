@@ -1,63 +1,100 @@
 import sys
 import os
-from .interpreter import Interpreter
+import ast
+from .compiler import SanskritASTCompiler
 
-def lint_file(filepath):
-    print(f"Linting {filepath}...")
+def get_compiler(filepath):
+    lang = 'engscript' if filepath.endswith('.eng') else 'sanskrypt'
+    return SanskritASTCompiler(lang=lang)
+
+def cmd_run(filepath):
+    with open(filepath, 'r', encoding='utf-8') as f:
+        code = f.read()
+    compiler = get_compiler(filepath)
+    ast_tree = compiler.compile(code)
+    bytecode = compile(ast_tree, filename=filepath, mode="exec")
+    exec(bytecode, {})
+
+def cmd_transpile(filepath):
+    with open(filepath, 'r', encoding='utf-8') as f:
+        code = f.read()
+    compiler = get_compiler(filepath)
+    ast_tree = compiler.compile(code)
+    print(ast.unparse(ast_tree))
+
+def cmd_ast(filepath):
+    with open(filepath, 'r', encoding='utf-8') as f:
+        code = f.read()
+    compiler = get_compiler(filepath)
+    ast_tree = compiler.compile(code)
+    print(ast.dump(ast_tree, indent=4))
+
+def cmd_check(filepath):
+    print(f"Checking {filepath}...")
     try:
         with open(filepath, 'r', encoding='utf-8') as f:
-            lines = f.readlines()
-        
-        # Simple Linter checks
-        errors = 0
-        lang = 'engscript' if filepath.endswith('.eng') else 'sanskrypt'
-        interp = Interpreter(lang)
-        
-        depth = 0
-        for i, line in enumerate(lines):
-            line = line.strip()
-            if not line or line.startswith('#'): continue
-            
-            # Check valid root
-            tokens = line.split()
-            command = tokens[0]
-            if command != interp.end_marker:
-                root, _ = interp._get_root(command)
-                if not root:
-                    print(f"Linter Error (Line {i+1}): Unknown root command '{command}'")
-                    errors += 1
-                    
-            # Check block depth
-            if lang == 'engscript' and (command.startswith('do_') or command.startswith('func_') or command.startswith('try_')): depth += 1
-            if lang == 'sanskrypt' and (command.startswith('kri_') or command.startswith('karya_') or command.startswith('yatna_')): depth += 1
-            if command == interp.end_marker: depth -= 1
-            
-        if depth > 0:
-            print(f"Linter Error: Missing {depth} '{interp.end_marker}' block closures.")
-            errors += 1
-        elif depth < 0:
-            print(f"Linter Error: Too many '{interp.end_marker}' block closures.")
-            errors += 1
-            
-        if errors == 0:
-            print("✅ Linter passed: 0 syntax errors found.")
-        else:
-            print(f"❌ Linter failed with {errors} errors.")
-            sys.exit(1)
-            
+            code = f.read()
+        compiler = get_compiler(filepath)
+        compiler.compile(code)
+        print("✅ Static Verification passed: No syntax errors found.")
     except Exception as e:
-        print(f"Fatal Linter Error: {e}")
+        print(f"❌ Verification failed: {e}")
+        sys.exit(1)
+
+def cmd_repl():
+    print("सस्ं कृत प्रोग्रामि गं वातावरणम ्(Sanskrypt REPL) AST Mode")
+    print("Type 'exit' to quit.\n")
+    compiler = SanskritASTCompiler(lang='sanskrypt')
+    namespace = {}
+    while True:
+        try:
+            command = input("वेद>>> ")
+            if command.strip() in ("त्याग", "exit", "quit"):
+                break
+            if not command.strip():
+                continue
+            ast_tree = compiler.compile(command)
+            bytecode = compile(ast_tree, filename="<stdin>", mode="exec")
+            exec(bytecode, namespace)
+        except KeyboardInterrupt:
+            continue
+        except EOFError:
+            break
+        except Exception as e:
+            print(f"Error: {e}")
 
 def main():
     if len(sys.argv) < 2:
-        print("Usage: python -m sanskrypt <file.eng>  OR  python -m sanskrypt --lint <file.eng>")
+        print("Usage: sanskrypt <command> [<args>]")
+        print("Commands:")
+        print("  run <file>       Execute compiled CPython bytecode")
+        print("  transpile <file> Translate to standard Python source")
+        print("  ast <file>       Dump CPython AST representation")
+        print("  check <file>     Run static grammar validation")
+        print("  repl             Launch interactive terminal")
         sys.exit(1)
         
-    if sys.argv[1] == '--lint':
-        lint_file(sys.argv[2])
+    cmd = sys.argv[1]
+    
+    # Backwards compatibility for --lint or direct file
+    if cmd == '--lint':
+        cmd_check(sys.argv[2])
+        return
+    elif cmd.endswith('.eng') or cmd.endswith('.skr') or cmd.endswith('.sans'):
+        cmd_run(cmd)
+        return
+        
+    if cmd == 'repl':
+        cmd_repl()
+    elif len(sys.argv) > 2:
+        filepath = sys.argv[2]
+        if cmd == 'run': cmd_run(filepath)
+        elif cmd == 'transpile': cmd_transpile(filepath)
+        elif cmd == 'ast': cmd_ast(filepath)
+        elif cmd == 'check': cmd_check(filepath)
+        else: print(f"Unknown command: {cmd}")
     else:
-        from . import run_file
-        run_file(sys.argv[1])
+        print(f"Command '{cmd}' requires a file argument.")
 
 if __name__ == "__main__":
     main()

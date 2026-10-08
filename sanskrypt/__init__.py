@@ -1,26 +1,20 @@
-from .interpreter import Interpreter
+import os
+from .compiler import SanskritASTCompiler
 
-def run(code, lang='sanskrypt'):
-    """
-    Executes a string of Sanskrypt or EngScript code.
-    :param code: The code string to execute.
-    :param lang: 'sanskrypt' or 'engscript'.
-    :return: The Interpreter instance (contains .variables).
-    """
-    interpreter = Interpreter(lang=lang)
-    interpreter.execute(code)
-    return interpreter
+def run(code, lang='engscript'):
+    compiler = SanskritASTCompiler(lang=lang)
+    ast_tree = compiler.compile(code)
+    bytecode = compile(ast_tree, filename="<sanskrypt>", mode="exec")
+    exec(bytecode, {})
 
 def run_file(filepath, lang=None):
-    """
-    Executes a .skr or .eng file.
-    :param filepath: Path to the script.
-    :param lang: Forces language parser (auto-detected if None).
-    """
     if lang is None:
         lang = 'engscript' if filepath.endswith('.eng') else 'sanskrypt'
         
     with open(filepath, 'r', encoding='utf-8') as f:
         code = f.read()
         
-    return run(code, lang=lang)
+    compiler = SanskritASTCompiler(lang=lang)
+    ast_tree = compiler.compile(code)
+    bytecode = compile(ast_tree, filename=filepath, mode="exec")
+    exec(bytecode, {})
